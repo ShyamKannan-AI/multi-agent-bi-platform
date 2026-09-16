@@ -7,13 +7,6 @@ openpyxl>=3.1,<4.0
 
 
 # ==========================================
-# SQL and Query Validation
-# ==========================================
-duckdb>=1.1,<2.0
-sqlglot>=26.0,<28.0
-
-
-# ==========================================
 # Agent Framework and Orchestration
 # ==========================================
 langchain>=0.3,<1.0
@@ -26,10 +19,6 @@ langgraph>=0.2,<1.0
 
 # Local models through Ollama
 langchain-ollama>=0.2,<1.0
-
-# Optional OpenAI support
-langchain-openai>=0.2,<1.0
-
 
 # ==========================================
 # Configuration and Validation
@@ -56,4 +45,3 @@ plotly>=5.0,<7.0
 # ==========================================
 # Dashboard
 # ==========================================
-streamlit>=1.40,<2.0
