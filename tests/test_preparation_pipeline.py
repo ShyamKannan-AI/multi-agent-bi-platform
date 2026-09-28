@@ -34,12 +34,13 @@ class MockPreparationAgent:
         df,
         profile,
         semantic_context,
+        quality_report=None,
+        semantic_quality=None,
     ):
         return {
             "status": "success",
             "operations": [],
         }
-
 
 # ============================================================
 # Mock quality engine
@@ -374,3 +375,62 @@ def test_pipeline_rejects_invalid_file():
 
     with pytest.raises(Exception):
         pipeline.run("does_not_exist.csv")
+
+def test_pipeline_passes_quality_context_to_preparation_agent(
+    tmp_path,
+):
+    file_path = tmp_path / "customers.csv"
+
+    pd.DataFrame(
+        {
+            "customer_id": [1, 2, 3],
+            "age": [20, None, 30],
+        }
+    ).to_csv(file_path, index=False)
+
+    class TrackingPreparationAgent:
+        def __init__(self):
+            self.quality_report = None
+            self.semantic_quality = None
+
+        def create_plan(
+            self,
+            df,
+            profile,
+            semantic_context,
+            quality_report=None,
+            semantic_quality=None,
+        ):
+            self.quality_report = quality_report
+            self.semantic_quality = semantic_quality
+
+            return {
+                "status": "success",
+                "operations": [],
+            }
+
+    preparation_agent = TrackingPreparationAgent()
+
+    pipeline = DataPreparationPipeline(
+        semantic_analyzer=MockSemanticAnalyzer(),
+        preparation_agent=preparation_agent,
+        cleaner=DataCleaner(),
+        auditor=PreparationAuditor(),
+        quality_engine=MockQualityEngine(),
+        quality_agent=MockQualityAgent(),
+    )
+
+    pipeline.run(str(file_path))
+
+    assert preparation_agent.quality_report is not None
+    assert preparation_agent.semantic_quality is not None
+
+    assert (
+        preparation_agent.quality_report["summary"]["total_issues"]
+        == 1
+    )
+
+    assert (
+        preparation_agent.semantic_quality["summary"]["review"]
+        == 1
+    )

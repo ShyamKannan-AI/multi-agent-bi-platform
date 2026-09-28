@@ -119,9 +119,11 @@ class DataPreparationPipeline:
         # 7. Generate preparation plan
         # ---------------------------------------------------------
         preparation_plan = self.preparation_agent.create_plan(
-            df=original_df,
-            profile=profile,
-            semantic_context=semantic_context,
+           df=original_df,
+           profile=profile,
+           semantic_context=semantic_context,
+           quality_report=quality_report,
+           semantic_quality=semantic_quality,
         )
 
         # ---------------------------------------------------------
