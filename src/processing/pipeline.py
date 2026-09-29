@@ -8,6 +8,7 @@ from src.processing.audit import PreparationAuditor
 from src.processing.cleaning import DataCleaner
 from src.profiling import profile_dataset
 from src.quality import DataQualityEngine
+from src.readiness import DataReadinessAssessor
 from src.semantics import SemanticAnalyzer
 
 
@@ -31,33 +32,43 @@ class DataPreparationPipeline:
     """
 
     def __init__(
-        self,
-        semantic_analyzer=None,
-        preparation_agent=None,
-        cleaner=None,
-        auditor=None,
-        quality_engine=None,
-        quality_agent=None,
+    self,
+    semantic_analyzer=None,
+    preparation_agent=None,
+    cleaner=None,
+    auditor=None,
+    quality_engine=None,
+    quality_agent=None,
+    readiness_assessor=None,
     ):
-        self.semantic_analyzer = (
-            semantic_analyzer or SemanticAnalyzer()
-        )
+        
+     self.semantic_analyzer = (
+        semantic_analyzer or SemanticAnalyzer()
+     )
 
-        self.preparation_agent = (
-            preparation_agent or DataPreparationAgent()
-        )
+     self.preparation_agent = (
+        preparation_agent or DataPreparationAgent()
+     )
 
-        self.cleaner = cleaner or DataCleaner()
+     self.cleaner = (
+        cleaner or DataCleaner()
+     )
 
-        self.auditor = auditor or PreparationAuditor()
+     self.auditor = (
+        auditor or PreparationAuditor()
+     )
 
-        self.quality_engine = (
-            quality_engine or DataQualityEngine()
-        )
+     self.quality_engine = (
+        quality_engine or DataQualityEngine()
+     )
 
-        self.quality_agent = (
-            quality_agent or DataQualityAgent()
-        )
+     self.quality_agent = (
+        quality_agent or DataQualityAgent()
+     )
+
+     self.readiness_assessor = (
+        readiness_assessor or DataReadinessAssessor()
+     )
 
     def run(self, file_path: str) -> dict[str, Any]:
         """
@@ -147,25 +158,30 @@ class DataPreparationPipeline:
         # 10. Audit preparation
         # ---------------------------------------------------------
         audit = self.auditor.audit(
-            original_df=original_df,
-            prepared_df=prepared_df,
-            preparation_plan=preparation_plan,
+        original_df=original_df,
+        prepared_df=prepared_df,
+        preparation_plan=preparation_plan,
         )
 
-        # ---------------------------------------------------------
-        # Final result
-        # ---------------------------------------------------------
+        readiness_report = self.readiness_assessor.assess(
+        quality_report=quality_report,
+        semantic_quality=semantic_quality,
+        validation=validation,
+        audit=audit,
+       )
+
         return {
-            "original_dataframe": original_df,
-            "prepared_dataframe": prepared_df,
-            "profile": profile,
-            "semantic_context": semantic_context,
-            "quality_report": quality_report,
-            "semantic_quality": semantic_quality,
-            "preparation_plan": preparation_plan,
-            "validation": validation,
-            "audit": audit,
-        }
+    "original_dataframe": original_df,
+    "prepared_dataframe": prepared_df,
+    "profile": profile,
+    "semantic_context": semantic_context,
+    "quality_report": quality_report,
+    "semantic_quality": semantic_quality,
+    "preparation_plan": preparation_plan,
+    "validation": validation,
+    "audit": audit,
+    "readiness_report": readiness_report,
+}
 
     @staticmethod
     def _validate_preparation(

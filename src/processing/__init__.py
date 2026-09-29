@@ -4,6 +4,6 @@ from src.processing.pipeline import DataPreparationPipeline
 
 __all__ = [
     "DataCleaner",
+    "PreparationAuditor",
     "DataPreparationPipeline",
-    "PreparationAuditor"
 ]

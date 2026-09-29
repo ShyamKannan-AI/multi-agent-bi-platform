@@ -201,3 +201,218 @@ def test_empty_semantic_context():
             profile,
             {},
         )
+
+def test_auto_action_high_confidence_is_executable():
+    agent = DataPreparationAgent.__new__(
+        DataPreparationAgent
+    )
+
+    proposed_plan = {
+        "status": "success",
+        "operations": [
+            {
+                "operation": "drop_duplicates",
+                "column": None,
+                "strategy": None,
+                "value": None,
+                "reason": "Duplicate rows detected.",
+                "confidence": 0.95,
+                "classification": "auto_action",
+                "source_issue_type": "duplicate_rows",
+                "source_column": None,
+            }
+        ],
+    }
+
+    semantic_quality = {
+        "interpretations": [
+            {
+                "issue_type": "duplicate_rows",
+                "column": None,
+                "classification": "auto_action",
+                "reason": "Duplicate records.",
+                "recommended_action": "Remove duplicates.",
+                "confidence": 0.95,
+            }
+        ]
+    }
+
+    result = agent._apply_safety_filter(
+        proposed_plan=proposed_plan,
+        semantic_quality=semantic_quality,
+        dataframe_columns=["customer_id", "name"],
+    )
+
+    assert len(result["operations"]) == 1
+    assert result["safety_summary"]["executable"] == 1
+    assert result["safety_summary"]["review_required"] == 0
+
+def test_review_classification_is_not_executable():
+    agent = DataPreparationAgent.__new__(
+        DataPreparationAgent
+    )
+
+    proposed_plan = {
+        "status": "success",
+        "operations": [
+            {
+                "operation": "fill_missing",
+                "column": "age",
+                "strategy": "median",
+                "value": None,
+                "reason": "Age contains missing values.",
+                "confidence": 0.95,
+                "classification": "review",
+                "source_issue_type": "missing_values",
+                "source_column": "age",
+            }
+        ],
+    }
+
+    semantic_quality = {
+        "interpretations": [
+            {
+                "issue_type": "missing_values",
+                "column": "age",
+                "classification": "review",
+                "reason": "Review required.",
+                "recommended_action": "Review.",
+                "confidence": 0.95,
+            }
+        ]
+    }
+
+    result = agent._apply_safety_filter(
+        proposed_plan=proposed_plan,
+        semantic_quality=semantic_quality,
+        dataframe_columns=["age"],
+    )
+
+    assert len(result["operations"]) == 0
+    assert len(result["review_required"]) == 1
+    assert result["safety_summary"]["review_required"] == 1
+
+def test_low_confidence_auto_action_requires_review():
+    agent = DataPreparationAgent.__new__(
+        DataPreparationAgent
+    )
+
+    proposed_plan = {
+        "status": "success",
+        "operations": [
+            {
+                "operation": "drop_duplicates",
+                "column": None,
+                "strategy": None,
+                "value": None,
+                "reason": "Possible duplicates.",
+                "confidence": 0.65,
+                "classification": "auto_action",
+                "source_issue_type": "duplicate_rows",
+                "source_column": None,
+            }
+        ],
+    }
+
+    semantic_quality = {
+        "interpretations": [
+            {
+                "issue_type": "duplicate_rows",
+                "column": None,
+                "classification": "auto_action",
+                "reason": "Possible duplicate records.",
+                "recommended_action": "Review duplicates.",
+                "confidence": 0.65,
+            }
+        ]
+    }
+
+    result = agent._apply_safety_filter(
+        proposed_plan=proposed_plan,
+        semantic_quality=semantic_quality,
+        dataframe_columns=["customer_id"],
+    )
+
+    assert len(result["operations"]) == 0
+    assert len(result["review_required"]) == 1
+    assert result["safety_summary"]["executable"] == 0
+
+def test_ignore_classification_is_skipped():
+    agent = DataPreparationAgent.__new__(
+        DataPreparationAgent
+    )
+
+    proposed_plan = {
+        "status": "success",
+        "operations": [
+            {
+                "operation": "fill_missing",
+                "column": "age",
+                "strategy": "median",
+                "value": None,
+                "reason": "Missing value detected.",
+                "confidence": 0.99,
+                "classification": "ignore",
+                "source_issue_type": "missing_values",
+                "source_column": "age",
+            }
+        ],
+    }
+
+    semantic_quality = {
+        "interpretations": [
+            {
+                "issue_type": "missing_values",
+                "column": "age",
+                "classification": "ignore",
+                "reason": "Missing value is legitimate.",
+                "recommended_action": "Do nothing.",
+                "confidence": 0.99,
+            }
+        ]
+    }
+
+    result = agent._apply_safety_filter(
+        proposed_plan=proposed_plan,
+        semantic_quality=semantic_quality,
+        dataframe_columns=["age"],
+    )
+
+    assert len(result["operations"]) == 0
+    assert len(result["ignored_operations"]) == 1
+    assert result["safety_summary"]["ignored"] == 1
+
+def test_nonexistent_column_requires_review():
+    agent = DataPreparationAgent.__new__(
+        DataPreparationAgent
+    )
+
+    proposed_plan = {
+        "status": "success",
+        "operations": [
+            {
+                "operation": "fill_missing",
+                "column": "salary",
+                "strategy": "median",
+                "value": None,
+                "reason": "Missing salary.",
+                "confidence": 0.99,
+                "classification": "auto_action",
+                "source_issue_type": "missing_values",
+                "source_column": "salary",
+            }
+        ],
+    }
+
+    semantic_quality = {
+        "interpretations": []
+    }
+
+    result = agent._apply_safety_filter(
+        proposed_plan=proposed_plan,
+        semantic_quality=semantic_quality,
+        dataframe_columns=["age", "name"],
+    )
+
+    assert len(result["operations"]) == 0
+    assert len(result["review_required"]) == 1
